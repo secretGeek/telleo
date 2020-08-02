@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>Title</title>
+</head>
+<body id='body'>
+<style>
+body, html {
+	height:100%;
+	margin:0;
+}
+body {
+	background-color:#333;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: cover;
+	background-attachment: fixed;
+}
+a {
+  color:yellow;
+}
+	a:hover {
+	 color:lightgreen;
+	}
+article { 
+	max-width:70ch;
+	padding:2ch;
+	margin:auto;
+	color:#FFF;
+	font-size:1.3em;
+	text-shadow:0 0.2ch 0.4ch #000, 0 0.2ch 0.1ch #000;
+	backdrop-filter: blur(10px);  
+}
+</style>
+<article>
+<h1 id='title'>Loading...</h1>
+<p id='tasks'></p>
+</article>
+</body>
+<script>
+
+function $id(id) {
+  return document.getElementById(id);
+}
+
+function go(boardId, listId) {
+	// boardId is required, but listId is optional. If not defined we will get all lists.
+	var request = new XMLHttpRequest();
+	var url = `https://trello.com/b/${boardId}`;
+	request.open('GET', url + '.json', true);
+	request.onload = function() {
+
+		if (request.status >= 200 && request.status < 400) {
+
+			var data = JSON.parse(request.responseText);
+			$id('title').innerHTML = data.name;
+			var cards = [];
+			var lists = {};
+			var imageUrl = data.prefs.backgroundImage;
+			document.body.style.backgroundImage = "url(" + imageUrl + ")";
+			for(var l of data.lists) {
+				if (listId === undefined || l.id === listId) {
+					lists[l.id] = {'name': l.name, 'pos': l.pos, 'id': l.id, 'cards': []};
+				}
+			}
+
+			for(var c of data.cards) {
+			  if (listId === undefined || c.idList === listId) {
+					lists[c.idList].cards.push({ 'name': c.name, 'pos': c.pos, 'idList': c.idList, 'id': c.id });
+				}
+			}
+
+			for(const l in lists) {
+			  lists[l].cards.sort(function(a, b){return a.pos - b.pos});
+			}
+			var f = "";
+
+			// Now go through the lists, and the cards and make some sweet sweet html...
+			for(const l in lists) {
+			  lists[l].cards.sort(function(a, b){return a.pos - b.pos});
+				f+=`<h2 id='${lists[l].id}'>${lists[l].name}</h2>`;
+				f+="<ol>\r\n";
+				for(var c of lists[l].cards) {
+				  f += "\t<li>" + c.name + "</li>\r\n";
+				}
+				f += "</ol>\r\n";
+			}
+			f += "<br />See <a href='" + url + "' target='_blank'>" + data.name + "</a>";
+			$id('tasks').innerHTML = f;
+		} else {
+			$id('tasks').innerHTML = "Failed to load cards.";
+		}
+	};
+
+	request.onerror = function() {
+		$id('tasks').innerHTML = "There was a connection error of some sort";
+	};
+	
+	request.send();
+}
+//Load 1 board, all of its lists (this example only has 1 list)
+//go("10jpdYDb");
+
+// Load a different board
+go("BKAcXAzq");
+
+// Load a specific list of a board
+//go("BKAcXAzq", "54a494c9174ff3d07e99d529");
+</script>
+</html>
